@@ -12,6 +12,16 @@
 
 IMPLEMENT_DYNAMIC(CTrain, CDialog)
 
+//열차 구역
+int railTopLeft[RAIL_NUM] = { 10,110,210,310,410,410,410,310,210,110,10,10,10 };
+int railTopRight[RAIL_NUM] = { 110,210,310,410,510,510,510,410,310,210,110,110,110 };
+int railBottomLeft[RAIL_NUM] = { 10,10,10,10,10,60,110,110,110,110,110,60,10 };
+int railBottomRight[RAIL_NUM] = { 60,60,60,60,60,110,160,160,160,160,160,110,60 };
+//겹치는 구역
+BOOL rectResult;
+CRect testRect;
+int testT = 0;
+
 CTrain::CTrain(CWnd* pParent /*=nullptr*/)
 	: CDialog(IDD_MAINTRAIN, pParent)
 {
@@ -58,15 +68,19 @@ void CTrain::OnBnClickedStart()
 	m_thread_move = AfxBeginThread(ThreadMoveTrain, &arg1, THREAD_PRIORITY_NORMAL, 0, 0);
 	m_thread_move->ResumeThread();
 
-	SetTimer(TRAIN_TIMER, 50, NULL);
+	//SetTimer(TRAIN_TIMER, 50, NULL);
 }
 
 
 void CTrain::OnBnClickedStop()
 {
+	//가장 최근 스레드만 정지함
+	m_thread_move->SuspendThread();
+	/*
 	KillTimer(TRAIN_TIMER);
 	KillTimer(WAIT_TIMER);
 	trainFlag = FALSE;
+	*/
 }
 
 void CTrain::TimerFunction(int flag) {
@@ -85,6 +99,13 @@ void CTrain::TimerFunction(int flag) {
 
 }
 
+void CTrain::TrainMove(int left, int top, int right, int bottom) {
+	//가상열차 위치 지정
+	trainSize.left = left;
+	trainSize.right = right;
+	trainSize.top = top;
+	trainSize.bottom = bottom;
+}
 
 
 void CTrain::OnPaint()
@@ -110,69 +131,21 @@ void CTrain::OnPaint()
 	}
 	dc.SelectObject(oldPen);
 
-	
+	/*
 	//출발 초록색 표시
 	CBrush brush;
 	CBrush* oldBrush = dc.SelectObject(&brush);
 	brush.CreateSolidBrush(RGB(0, 255, 0));       // 초록
-	/*
-	if (trainFlag == TRUE) {
-		brush.CreateSolidBrush(RGB(0, 255, 0));       // 초록
-	}
-	else {
-		brush.CreateSolidBrush(RGB(255, 0, 0));       // 빨강
-	}
-	*/
 	oldBrush = dc.SelectObject(&brush);
-
-	dc.Rectangle(railTopLeft[trainCount], railBottomLeft[trainCount], railTopRight[trainCount], railBottomRight[trainCount]);
+	
+	dc.Rectangle(railTopLeft[testT], railBottomLeft[testT], railTopRight[testT], railBottomRight[testT]);
+	
+	//dc.Rectangle(testRect.left, testRect.top, testRect.right, testRect.bottom);
 	dc.SelectObject(oldBrush);    // 시스템 브러시 객체를 돌려줌
-
-	//이전 역 빨강색 표시
-	if (trainCount >= 1) {
-		CBrush brush;
-		CBrush* oldBrush = dc.SelectObject(&brush);
-		brush.CreateSolidBrush(RGB(255, 0, 0));       // 녹색 채움색을 생성
-		oldBrush = dc.SelectObject(&brush);
-	
-		dc.Rectangle(10 + ((trainCount - 1) * 100), 10, 110 + ((trainCount - 1) * 100), 60);
-		dc.SelectObject(oldBrush);    // 시스템 브러시 객체를 돌려줌
-	}
-	
-	bmp.LoadBitmapW(IDB_TRAIN);
-
-	// 로딩된 비트맵 정보 확인
-	bmp.GetBitmap(&bmpInfo);
-
-	// 메모리 DC에 선택
-	pOldBmp = MemDC.SelectObject(&bmp);
-	if (trainCount <= 4) {
-		//오른
-		//dc.BitBlt(trainSpeed, 20, bmpInfo.bmWidth + trainSpeed, bmpInfo.bmHeight, &MemDC, 0, 0, SRCCOPY);
-		//dc.Rectangle(trainSpeed, 20, trainSpeed+30, 50);
-		trainX = bmpInfo.bmWidth + trainSpeed;
-	}
-	else if (trainCount <= 6) {
-		//아래
-		dc.BitBlt(trainX - bmpInfo.bmWidth, trainSpeed, trainX, bmpInfo.bmHeight+trainSpeed, &MemDC, 0, 0, SRCCOPY);
-		//dc.Rectangle(trainX -30, trainSpeed, trainX, 30 + trainSpeed);
-		trainY = bmpInfo.bmHeight + trainSpeed;
-	}
-	else if (trainCount <= 10) {
-		//왼
-		dc.BitBlt(trainSpeed, trainY-bmpInfo.bmHeight, bmpInfo.bmWidth + trainSpeed, trainY, &MemDC, 0, 0, SRCCOPY);
-		//dc.Rectangle(trainSpeed, trainY - 20, trainSpeed + 10, trainY);
-		trainX = bmpInfo.bmWidth + trainSpeed;
-		
-	}
-	else if (trainCount <= 12) {
-		//위
-		dc.BitBlt(trainX - bmpInfo.bmWidth, trainSpeed, trainX, bmpInfo.bmHeight + trainSpeed, &MemDC, 0, 0, SRCCOPY);
-	}
-
+	*/
 	MemDC.SelectObject(pOldBmp);
 
-	
+
 }
 
 
@@ -183,73 +156,58 @@ void CTrain::OnTimer(UINT_PTR nIDEvent)
 	switch (nIDEvent)
 	{
 	case TRAIN_TIMER:
+		//열차 속도 조절
 		if (trainCount <= 6) {
-			if (trainCount == 0 && trainSpeed == 50) {
-				trainSpeed += 0;
-			}
-			else {
-				trainSpeed += 10;
-			}
+			trainSpeed += 10;
 		}
 		else {
 			trainSpeed -= 10;
 		}
 
 		//역에 도착하면 멈추기
-		if (trainCount <= 4 && bmpInfo.bmWidth + trainSpeed == railTopRight[trainCount]) {
+		if (trainCount <= 4 && (60 + trainSpeed) == railTopRight[trainCount]) {
 			testText1.SetWindowTextW(_T("1"));
 			TimerFunction(0);
-			m_thread_move->SuspendThread();
 		}
-		else if (trainCount >= 5 && trainCount <= 6 && bmpInfo.bmHeight + trainSpeed == railBottomRight[trainCount]-10) {
+		else if (trainCount >= 5 && trainCount <= 6 && (30 + trainSpeed) == railBottomRight[trainCount] - 10) {
 			testText1.SetWindowTextW(_T("2"));
 			TimerFunction(0);
-			m_thread_move->SuspendThread();
 		}
-		
-		else if (trainCount >= 5 && trainCount <= 10 && bmpInfo.bmWidth + trainSpeed == railTopRight[trainCount]) {
+
+		else if (trainCount >= 5 && trainCount <= 10 && (60 + trainSpeed) == railTopRight[trainCount]) {
 			testText1.SetWindowTextW(_T("3"));
 			TimerFunction(0);
-			m_thread_move->SuspendThread();
 		}
-		else if (trainCount >= 11 && trainCount <= 12 && bmpInfo.bmHeight + trainSpeed == railBottomRight[trainCount] - 10) {
+		else if (trainCount >= 11 && trainCount <= 12 && (30 + trainSpeed) == railBottomRight[trainCount] - 10) {
 			testText1.SetWindowTextW(_T("4"));
 			TimerFunction(0);
-			m_thread_move->SuspendThread();
 		}
-		//Invalidate(TRUE);
-		UpdateWindow();
+
 		break;
 	case WAIT_TIMER:
 		//시간 지나면 다시 움직이기
 		trainCount++;
-
+		testText1.SetWindowTextW(_T("동작함"));
 		if (trainCount == 5) {
 			trainSpeed = 20;
 		}
 		else if (trainCount == 7) {
-			trainSpeed = trainX - bmpInfo.bmWidth;
+			trainSpeed = trainX - 30;
 		}
 		else if (trainCount == 11) {
-			trainSpeed = trainY - bmpInfo.bmHeight;
+			trainSpeed = trainY - 30;
 		}
 		else if (trainCount == 13) {
 
-			trainCount = 0;
+			trainCount = 1;
 			trainSpeed = 50;
 			trainX = 0;
 			trainY = 0;
 		}
 		TimerFunction(1);
-		m_thread_move->ResumeThread();
-		//Invalidate(TRUE);
-		UpdateWindow();
+
 		break;
 	}
-	
-
-
-
 	CDialog::OnTimer(nIDEvent);
 }
 
@@ -270,25 +228,99 @@ UINT DrawObject(LPVOID param)
 	CDC dc;
 	HDC hdc = ::GetDC(pArg->hwnd);
 	CRect rect;
-	int trainSpeed = 10;
+	int trainSpeed = 0;
 	int trainLength = 60;
+	int trainX;
+	int trainY;
 	CString tmp;
 
-	rect = CRect(0 + trainSpeed, 20, 60 + trainSpeed, 50);
+	rect = CRect(trainSpeed, 20, 30 + trainSpeed, 50);
 	dc.Attach(hdc);
 
-	for (int i = 0; i < 30; i++)
-	{
-		Sleep(100);
-		//trainSpeed = pMain->trainSpeed;
-		tmp.Format(_T("%d\n"), trainSpeed);
-		OutputDebugStringW(tmp);
-		InvalidateRect(pArg->hwnd, CRect(trainSpeed - trainLength, 20, trainSpeed + 18, 50), TRUE);
-		//InvalidateRect(pArg->hwnd, NULL, TRUE);
-		trainSpeed += 18;
-		dc.Rectangle(CRect(trainSpeed, 20, trainLength + trainSpeed, 50));
-		dc.Rectangle(CRect(trainSpeed, 60, trainLength + trainSpeed, 90));
+	int i = 0;
+	while (1) {
+		Sleep(10);
+		if (i <= 6) {
+			trainSpeed += 10;
+		}
+		else {
+			trainSpeed -= 10;
+		}
+		rectResult = testRect.IntersectRect(&rect, &CRect(railTopLeft[i], railBottomLeft[i], railTopRight[i], railBottomRight[i]));
+		//열차 이동
+		if (i <= 4) {
+			//오른
+			rect = CRect(trainSpeed, 20, trainSpeed + 30, 50);
+			InvalidateRect(pArg->hwnd, CRect(trainSpeed-10, 20, trainSpeed + 20, 50), TRUE);
+			trainX = trainSpeed + 30;
+		}
+		else if (i <= 6) {
+			//아래
+			rect = CRect(trainX - 30, trainSpeed, trainX, 30 + trainSpeed);
+			InvalidateRect(pArg->hwnd, CRect(trainX - 30, trainSpeed-10, trainX, 20 + trainSpeed), TRUE);
+			trainY = 30 + trainSpeed;
+		}
+		else if (i <= 10) {
+			//왼
+			rect = CRect(trainSpeed, trainY - 30, trainSpeed + 30, trainY);
+			InvalidateRect(pArg->hwnd, CRect(trainSpeed + 10, trainY-30, trainSpeed + 40, trainY), TRUE);
+			trainX = trainSpeed + 30;
+
+		}
+		else if (i <= 12) {
+			//위
+			rect = CRect(trainX - 30, trainSpeed, trainX, 30 + trainSpeed);
+			InvalidateRect(pArg->hwnd, CRect(trainX - 30, trainSpeed+10, trainX, 40 + trainSpeed), TRUE);
+		}
 		
+		//InvalidateRect(pArg->hwnd, NULL, TRUE);
+		UpdateWindow(pArg->hwnd);
+		CBrush brush;
+		CBrush* oldBrush = dc.SelectObject(&brush);
+		brush.CreateSolidBrush(RGB(0, 255, 0));       // 초록
+		oldBrush = dc.SelectObject(&brush);
+		dc.Rectangle(rect);
+		dc.SelectObject(oldBrush);    // 시스템 브러시 객체를 돌려줌
+
+		//정차, 방향 조정
+		if (i <= 4 && (60 + trainSpeed) == railTopRight[i]) {
+			testT = i;
+			
+			Sleep(1000);
+			i++;
+			if (i == 5) {
+				trainSpeed = 20;
+			}
+		}
+		else if ((i >= 5 && i <= 6 && (30 + trainSpeed) == railBottomRight[i] - 10)) {
+			testT = i;
+			Sleep(1000);
+			i++;
+			if (i == 7) {
+				trainSpeed = trainX - 30;
+			}
+		}
+		else if (i >= 5 && i <= 10 && (60 + trainSpeed) == railTopRight[i]) {
+			testT = i;
+			Sleep(1000);
+			i++;
+			if (i == 11) {
+				trainSpeed = trainY - 30;
+			}
+		}
+		else if ((i >= 11 && i <= 12 && (30 + trainSpeed) == railBottomRight[i] - 10)) {
+			testT = i;
+			Sleep(1000);
+			i++;
+			if (i == 13) {
+				i = 1;
+				trainSpeed = 50;
+				trainX = 0;
+				trainY = 0;
+			}
+		}
+
+
 	}
 
 	return 1;
@@ -326,6 +358,7 @@ UINT ThreadMoveTrain(LPVOID param)
 	return 0;
 }
 
+
 /*
 CString test;
 			test.Format(L"%d", bmpInfo.bmHeight + trainSpeed);
@@ -340,7 +373,7 @@ CString test;
 
 HBRUSH CTrain::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
 {
-	
+
 	HBRUSH hbr;
 
 
@@ -349,6 +382,6 @@ HBRUSH CTrain::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
 
 	hbr = (HBRUSH)GetStockObject(NULL_BRUSH);
 	return hbr;
-	
+
 }
 */
