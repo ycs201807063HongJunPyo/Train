@@ -42,7 +42,7 @@ public:
 	afx_msg	void TrainMove(int left, int top, int right, int bottom);
 	CRect trainSize;
 	BOOL startFlag;
-	
+	BOOL insCheck[RAIL_NUM];
 
 
 	BITMAP bmpInfo;  //비트맵

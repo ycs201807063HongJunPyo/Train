@@ -28,7 +28,7 @@ CTrain::CTrain(CWnd* pParent /*=nullptr*/)
 	: CDialog(IDD_MAINTRAIN, pParent)
 {
 	startFlag = TRUE;
-	
+
 	trainCount = 0;
 }
 
@@ -51,7 +51,7 @@ BEGIN_MESSAGE_MAP(CTrain, CDialog)
 	ON_WM_PAINT()
 	ON_WM_ERASEBKGND()
 	//ON_WM_CTLCOLOR()
-	
+
 END_MESSAGE_MAP()
 
 
@@ -60,6 +60,7 @@ UINT ThreadMoveTrain(LPVOID param);
 
 void CTrain::OnBnClickedCreate()
 {
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
 	trainFlag = TRUE;
 
 	arg1.hwnd = this->m_hWnd;
@@ -81,8 +82,8 @@ void CTrain::OnBnClickedStart()
 void CTrain::OnBnClickedStop()
 {
 	trainFlag = FALSE;
-	
-	
+
+
 	/*
 	KillTimer(TRAIN_TIMER);
 	KillTimer(WAIT_TIMER);
@@ -176,7 +177,7 @@ UINT DrawObject(LPVOID param)
 	int trainSpeed = 0;  //열차 속도
 	int trainX;  //x기억
 	int trainY;  //y기억
-	
+
 	CRect MainRectTest;
 	CRect tmpRect;
 
@@ -199,30 +200,37 @@ UINT DrawObject(LPVOID param)
 			if (stationCount <= 4) {
 				//오른
 				rect = CRect(trainSpeed, 20, trainSpeed + 30, 50);
-				InvalidateRect(pArg->hwnd, CRect(trainSpeed, 20, trainSpeed + 30, 50), TRUE);
+				InvalidateRect(pArg->hwnd, rect, TRUE);
 				trainX = trainSpeed + 30;
 			}
 			else if (stationCount <= 6) {
 				//아래
 				rect = CRect(trainX - 30, trainSpeed, trainX, 30 + trainSpeed);
-				InvalidateRect(pArg->hwnd, CRect(trainX - 30, trainSpeed, trainX, 30 + trainSpeed), TRUE);
+				InvalidateRect(pArg->hwnd, rect, TRUE);
 				trainY = 30 + trainSpeed;
 			}
 			else if (stationCount <= 10) {
 				//왼
 				rect = CRect(trainSpeed, trainY - 30, trainSpeed + 30, trainY);
-				InvalidateRect(pArg->hwnd, CRect(trainSpeed, trainY - 30, trainSpeed + 30, trainY), TRUE);
+				InvalidateRect(pArg->hwnd, rect, TRUE);
 				trainX = trainSpeed + 30;
 
 			}
 			else if (stationCount <= 12) {
 				//위
 				rect = CRect(trainX - 30, trainSpeed, trainX, 30 + trainSpeed);
-				InvalidateRect(pArg->hwnd, CRect(trainX - 30, trainSpeed, trainX, 30 + trainSpeed), TRUE);
+				InvalidateRect(pArg->hwnd, rect, TRUE);
 			}
 
 			CBrush brush;
 			CBrush* oldBrush = dc.SelectObject(&brush);
+
+			if (IntersectRect(tmpRect, rect, CRect(railTopLeft[stationCount], railBottomLeft[stationCount], railTopRight[stationCount], railBottomRight[stationCount])) && stationCount >= 0)
+			{
+				pMain->insCheck[stationCount] = TRUE;
+			}
+
+			/*
 			//열차 구역 색칠하기(가는중 초록, 출발 빨강)
 			if (IntersectRect(tmpRect, MainRectTest, CRect(railTopLeft[stationCount], railBottomLeft[stationCount], railTopRight[stationCount], railBottomRight[stationCount])) && stationCount >= 0)
 			{
@@ -244,8 +252,9 @@ UINT DrawObject(LPVOID param)
 				oldBrush = dc.SelectObject(&brush);
 				dc.Rectangle(railTopLeft[subStationCount], railBottomLeft[subStationCount], railTopRight[subStationCount], railBottomRight[subStationCount]);
 				OutputDebugString(_T("test\n"));
-				
+
 			}
+			*/
 			dc.SelectObject(oldBrush);
 
 			dc.Rectangle(rect);
@@ -285,6 +294,30 @@ UINT DrawObject(LPVOID param)
 					trainX = 0;
 					trainY = 0;
 				}
+			}
+
+			if (IntersectRect(tmpRect, MainRectTest, CRect(railTopLeft[stationCount], railBottomLeft[stationCount], railTopRight[stationCount], railBottomRight[stationCount])) && stationCount >= 0)
+			{
+				//색칠 + 무효화
+				brush.CreateSolidBrush(RGB(0, 255, 0));       // 초록
+				oldBrush = dc.SelectObject(&brush);
+				dc.Rectangle(railTopLeft[stationCount], railBottomLeft[stationCount], railTopRight[stationCount], railBottomRight[stationCount]);
+				OutputDebugString(_T("test\n"));
+				//이전 부분과 충돌이 있을경우에만 무효화 해주기
+				if (IntersectRect(tmpRect, MainRectTest, CRect(railTopLeft[subStationCount], railBottomLeft[subStationCount], railTopRight[subStationCount], railBottomRight[subStationCount])) && !pMain->insCheck[subStationCount]) {
+					InvalidateRect(pArg->hwnd, CRect(railTopLeft[stationCount - 1], railBottomLeft[stationCount - 1], railTopRight[stationCount - 1], railBottomRight[stationCount - 1]), TRUE);
+				}
+
+			}
+			else if (IntersectRect(tmpRect, MainRectTest, CRect(railTopLeft[subStationCount], railBottomLeft[subStationCount], railTopRight[subStationCount], railBottomRight[subStationCount])) && subStationCount >= 0)
+			{
+				//색만 칠하기
+				brush.CreateSolidBrush(RGB(255, 0, 0));       // 빨강
+				oldBrush = dc.SelectObject(&brush);
+				dc.Rectangle(railTopLeft[subStationCount], railBottomLeft[subStationCount], railTopRight[subStationCount], railBottomRight[subStationCount]);
+				pMain->insCheck[subStationCount] = FALSE;
+				OutputDebugString(_T("test\n"));
+
 			}
 		}
 	}
