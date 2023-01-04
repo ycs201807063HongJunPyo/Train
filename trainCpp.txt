@@ -226,26 +226,32 @@ UINT DrawObject(LPVOID param)
 			//열차 구역 색칠하기(가는중 초록, 출발 빨강)
 			if (IntersectRect(tmpRect, MainRectTest, CRect(railTopLeft[stationCount], railBottomLeft[stationCount], railTopRight[stationCount], railBottomRight[stationCount])) && stationCount >= 0)
 			{
+				//색칠 + 무효화
 				brush.CreateSolidBrush(RGB(0, 255, 0));       // 초록
 				oldBrush = dc.SelectObject(&brush);
 				dc.Rectangle(railTopLeft[stationCount], railBottomLeft[stationCount], railTopRight[stationCount], railBottomRight[stationCount]);
 				OutputDebugString(_T("test\n"));
-				InvalidateRect(pArg->hwnd, CRect(railTopLeft[stationCount - 1], railBottomLeft[stationCount - 1], railTopRight[stationCount - 1], railBottomRight[stationCount - 1]), TRUE);
+				//이전 부분과 충돌이 있을경우에만 무효화 해주기
+				if (IntersectRect(tmpRect, MainRectTest, CRect(railTopLeft[subStationCount], railBottomLeft[subStationCount], railTopRight[subStationCount], railBottomRight[subStationCount]))) {
+					InvalidateRect(pArg->hwnd, CRect(railTopLeft[stationCount - 1], railBottomLeft[stationCount - 1], railTopRight[stationCount - 1], railBottomRight[stationCount - 1]), TRUE);
+				}
+
 			}
 			else if (IntersectRect(tmpRect, MainRectTest, CRect(railTopLeft[subStationCount], railBottomLeft[subStationCount], railTopRight[subStationCount], railBottomRight[subStationCount])) && subStationCount >= 0)
 			{
+				//색만 칠하기
 				brush.CreateSolidBrush(RGB(255, 0, 0));       // 빨강
 				oldBrush = dc.SelectObject(&brush);
 				dc.Rectangle(railTopLeft[subStationCount], railBottomLeft[subStationCount], railTopRight[subStationCount], railBottomRight[subStationCount]);
 				OutputDebugString(_T("test\n"));
-				InvalidateRect(pArg->hwnd, CRect(railTopLeft[subStationCount - 1], railBottomLeft[subStationCount - 1], railTopRight[subStationCount - 1], railBottomRight[subStationCount - 1]), TRUE);
+				
 			}
 			dc.SelectObject(oldBrush);
 
 			dc.Rectangle(rect);
 			MainRectTest = rect;
 			//정차, 방향 조정
-			if (stationCount <= 4 && (60 + trainSpeed) == railTopRight[stationCount]) {
+			if (stationCount <= 4 && (50 + trainSpeed) == railTopRight[stationCount]) {
 				subStationCount = stationCount;
 				Sleep(1000);
 				stationCount++;
@@ -261,7 +267,7 @@ UINT DrawObject(LPVOID param)
 					trainSpeed = trainX - 30;
 				}
 			}
-			else if (stationCount >= 5 && stationCount <= 10 && (60 + trainSpeed) == railTopRight[stationCount]) {
+			else if (stationCount >= 5 && stationCount <= 10 && (70 + trainSpeed) == railTopRight[stationCount]) {
 				subStationCount = stationCount;
 				Sleep(1000);
 				stationCount++;
