@@ -21,6 +21,9 @@ int railBottomRight[RAIL_NUM] = { 60,60,60,60,60,110,160,160,160,160,160,110,60 
 BOOL rectResult;
 CRect testRect;
 int testT = 0;
+CRect MainRectTest;
+CRect tmpRect;
+BOOL invRect;
 
 CTrain::CTrain(CWnd* pParent /*=nullptr*/)
 	: CDialog(IDD_MAINTRAIN, pParent)
@@ -131,18 +134,17 @@ void CTrain::OnPaint()
 	}
 	dc.SelectObject(oldPen);
 
-	/*
+	
 	//출발 초록색 표시
 	CBrush brush;
 	CBrush* oldBrush = dc.SelectObject(&brush);
 	brush.CreateSolidBrush(RGB(0, 255, 0));       // 초록
 	oldBrush = dc.SelectObject(&brush);
-	
-	dc.Rectangle(railTopLeft[testT], railBottomLeft[testT], railTopRight[testT], railBottomRight[testT]);
-	
+//	dc.Rectangle(railTopLeft[testT], railBottomLeft[testT], railTopRight[testT], railBottomRight[testT]);
+
 	//dc.Rectangle(testRect.left, testRect.top, testRect.right, testRect.bottom);
 	dc.SelectObject(oldBrush);    // 시스템 브러시 객체를 돌려줌
-	*/
+	
 	MemDC.SelectObject(pOldBmp);
 
 
@@ -239,7 +241,7 @@ UINT DrawObject(LPVOID param)
 
 	int i = 0;
 	while (1) {
-		Sleep(10);
+		Sleep(100);
 		if (i <= 6) {
 			trainSpeed += 10;
 		}
@@ -251,28 +253,42 @@ UINT DrawObject(LPVOID param)
 		if (i <= 4) {
 			//오른
 			rect = CRect(trainSpeed, 20, trainSpeed + 30, 50);
-			InvalidateRect(pArg->hwnd, CRect(trainSpeed-10, 20, trainSpeed + 20, 50), TRUE);
+			InvalidateRect(pArg->hwnd, CRect(trainSpeed, 20, trainSpeed + 30, 50), TRUE);
 			trainX = trainSpeed + 30;
 		}
 		else if (i <= 6) {
 			//아래
 			rect = CRect(trainX - 30, trainSpeed, trainX, 30 + trainSpeed);
-			InvalidateRect(pArg->hwnd, CRect(trainX - 30, trainSpeed-10, trainX, 20 + trainSpeed), TRUE);
+			InvalidateRect(pArg->hwnd, CRect(trainX - 30, trainSpeed, trainX, 30 + trainSpeed), TRUE);
 			trainY = 30 + trainSpeed;
 		}
 		else if (i <= 10) {
 			//왼
 			rect = CRect(trainSpeed, trainY - 30, trainSpeed + 30, trainY);
-			InvalidateRect(pArg->hwnd, CRect(trainSpeed + 10, trainY-30, trainSpeed + 40, trainY), TRUE);
+			InvalidateRect(pArg->hwnd, CRect(trainSpeed, trainY - 30, trainSpeed + 30, trainY), TRUE);
 			trainX = trainSpeed + 30;
 
 		}
 		else if (i <= 12) {
 			//위
 			rect = CRect(trainX - 30, trainSpeed, trainX, 30 + trainSpeed);
-			InvalidateRect(pArg->hwnd, CRect(trainX - 30, trainSpeed+10, trainX, 40 + trainSpeed), TRUE);
+			InvalidateRect(pArg->hwnd, CRect(trainX - 30, trainSpeed, trainX, 30 + trainSpeed), TRUE);
 		}
-		
+
+		CBrush brush;
+		CBrush* oldBrush = dc.SelectObject(&brush);
+
+		if (IntersectRect(tmpRect, MainRectTest, CRect(railTopLeft[i], railBottomLeft[i], railTopRight[i], railBottomRight[i])) && invRect)
+		{
+			brush.CreateSolidBrush(RGB(0, 255, 0));       // 초록
+			oldBrush = dc.SelectObject(&brush);
+			dc.Rectangle(railTopLeft[i], railBottomLeft[i], railTopRight[i], railBottomRight[i]);
+			OutputDebugString(_T("test\n"));
+			InvalidateRect(pArg->hwnd, CRect(railTopLeft[i - 1], railBottomLeft[i - 1], railTopRight[i - 1], railBottomRight[i - 1]), TRUE);
+			//invRect = FALSE;
+		}
+
+		/*
 		//InvalidateRect(pArg->hwnd, NULL, TRUE);
 		UpdateWindow(pArg->hwnd);
 		CBrush brush;
@@ -281,11 +297,15 @@ UINT DrawObject(LPVOID param)
 		oldBrush = dc.SelectObject(&brush);
 		dc.Rectangle(rect);
 		dc.SelectObject(oldBrush);    // 시스템 브러시 객체를 돌려줌
-
+		MainRectTest = rect;
+		*/
+		dc.SelectObject(oldBrush);
+		dc.Rectangle(rect);
+		MainRectTest = rect;
 		//정차, 방향 조정
 		if (i <= 4 && (60 + trainSpeed) == railTopRight[i]) {
 			testT = i;
-			
+
 			Sleep(1000);
 			i++;
 			if (i == 5) {
@@ -320,7 +340,15 @@ UINT DrawObject(LPVOID param)
 			}
 		}
 
-
+		if (IntersectRect(tmpRect, MainRectTest, CRect(railTopLeft[i - 1], railBottomLeft[i - 1], railTopRight[i - 1], railBottomRight[i - 1])))
+		{
+			brush.CreateSolidBrush(RGB(0, 255, 0));       // 초록
+			oldBrush = dc.SelectObject(&brush);
+			dc.Rectangle(railTopLeft[i], railBottomLeft[i], railTopRight[i], railBottomRight[i]);
+			OutputDebugString(_T("test\n"));
+			InvalidateRect(pArg->hwnd, CRect(railTopLeft[i - 1], railBottomLeft[i - 1], railTopRight[i - 1], railBottomRight[i - 1]), TRUE);
+			//invRect = TRUE;
+		}
 	}
 
 	return 1;
